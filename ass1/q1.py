@@ -5,7 +5,7 @@ import re
 import argparse
 
 captured = set()
-
+USER_AGENT_PATTERN = re.compile("User-Agent: (.*)\r\n")
 
 def analyzer_packet(analyzers, test_packet):
     """
@@ -22,7 +22,7 @@ def analyzer_packet(analyzers, test_packet):
                 entry = ", ".join([method,test_packet[IP].src, res])
                 if entry not in captured:
                     captured.add(entry)
-                print entry
+                    print entry
 
 
 def analyze_tcp_opts(test_packet):
@@ -70,21 +70,26 @@ def analyze_user_agent(test_packet):
         data = test_packet[TCP][1]
     except:
         return None
-    res = re.search("User-Agent: (.*)\r\n", data)
+    data = str(data)
+    res = re.search(USER_AGENT_PATTERN, data)
     if res is not None:
         return res.group(1), "HTTP (User-Agent)"
 
 if __name__ == "__main__":
     ANALYZERS = [analyze_tcp_opts, analyze_window_size, analyze_ttl, analyze_user_agent]
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--file", help="path to pcap file to be analized",
-                        action="store_true")
+    parser.add_argument("-f", "--file", help="path to pcap file to be analized")
     parser.add_argument("-s", "--sniffer", help="run script in sniffer mode",
                         action="store_true")
     args = parser.parse_args()
-    # file mode
-    if args.file:
-        print "file mode"
+
     # sniffer mode
     if args.sniffer:
         print "sniffer mode"
+
+    else:
+        if args.file is None:
+            print " No file path provided."
+        data = rdpcap(args.file)
+        for item in data:
+            analyzer_packet(ANALYZERS, item)
