@@ -33,7 +33,7 @@ def analyze_tcp_opts(test_packet):
     """
     if TCP in test_packet and test_packet[TCP].options:
         for item in test_packet[TCP].options:
-            if 'Timestep' in item:
+            if 'Timestamp' in item:
                 return "Linux", "TCP (Options)"
 
 
