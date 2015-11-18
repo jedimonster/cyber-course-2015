@@ -84,12 +84,11 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # sniffer mode
-    if args.sniffer:
-        print "sniffer mode"
-
-    else:
-        if args.file is None:
-            print " No file path provided."
+    if (not args.sniffer) and (not args.file):
+        raise argparse.ArgumentTypeError('-f or -s parameters has to be used')
+    if args.file:
         data = rdpcap(args.file)
         for item in data:
             analyzer_packet(ANALYZERS, item)
+    else:
+        print "sniffer mode"
