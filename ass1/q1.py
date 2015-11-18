@@ -22,7 +22,7 @@ def analyzer_packet(analyzers, test_packet):
                 entry = ", ".join([method,test_packet[IP].src, res])
                 if entry not in captured:
                     captured.add(entry)
-                    print entry
+                    return entry
 
 
 def analyze_tcp_opts(test_packet):
@@ -83,12 +83,13 @@ if __name__ == "__main__":
                         action="store_true")
     args = parser.parse_args()
 
-    # sniffer mode
     if (not args.sniffer) and (not args.file):
         raise argparse.ArgumentTypeError('-f or -s parameters has to be used')
     if args.file:
         data = rdpcap(args.file)
         for item in data:
-            analyzer_packet(ANALYZERS, item)
+            analytic_res = analyzer_packet(ANALYZERS, item)
+            if analytic_res is not None:
+                print analytic_res
     else:
-        print "sniffer mode"
+        sniff(prn=lambda x: analyzer_packet(ANALYZERS, x))
