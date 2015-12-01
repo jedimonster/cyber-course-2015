@@ -1,8 +1,5 @@
 #!/usr/bin/python
 
-#todo any idea why am I getting WARNING: No route found for IPv6 destination :: (no default route?)
-
-
 from scapy.all import *
 import re
 import argparse
