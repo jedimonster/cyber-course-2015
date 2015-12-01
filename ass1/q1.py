@@ -1,5 +1,8 @@
 #!/usr/bin/python
 
+#todo any idea why am I getting WARNING: No route found for IPv6 destination :: (no default route?)
+
+
 from scapy.all import *
 import re
 import argparse
@@ -7,13 +10,14 @@ import argparse
 captured = set()
 USER_AGENT_PATTERN = re.compile(r"User-Agent: (.*)\r\n")
 BROWSER_PATTERN = re.compile("(Chrome.*?|Firefox.*?|Opera.*?)(\s|$)")
+# todo does he want chromium or chrome? output sample says chromium.
 OS_PATTERN = re.compile(r"(Ubuntu|Windows)")
 OS_VERSION_PATTERN = re.compile(r"(Linux x86_64|Windows.*WOW64)")
 
 
 def parse_user_agent(ua):
     """
-    If parsing fails(regex based, original ua returns)
+    If parsing fails(regex based), original ua returns
     :param ua: string - user agent string
     :return: parsed string or string without changes if parsing failed
     """
@@ -22,9 +26,9 @@ def parse_user_agent(ua):
     os_version = re.search(OS_VERSION_PATTERN, ua)
     if (browser is not None) and (operation_system is not None) and (os_version is not None):
         try:
-            return operation_system.group(1)+" "+os_version.group(1).replace('WOW', "x").\
-                replace("10.0;", "10").replace(" NT ", "").replace("Windows","")+","+browser.group(1)
-        except:
+            return operation_system.group(1) + " " + os_version.group(1).replace('WOW', "x"). \
+                replace("10.0;", "10").replace(" NT ", "").replace("Windows", "") + "," + browser.group(1)
+        except:  # todo except what.. re.error? if we wanna be 100% gotta be specific
             return ua
     return ua
 
@@ -41,8 +45,8 @@ def analyzer_packet(analyzers, test_packet):
         if res is not None:
             res, method = res
             if IP in test_packet:
-                entry = ", ".join([method,test_packet[IP].src, res])
-                if entry not in captured:
+                entry = ", ".join([method, test_packet[IP].src, res])
+                if entry not in captured:  # todo if it's a set, isn't this line redundant?
                     captured.add(entry)
                     return entry
 
@@ -97,6 +101,7 @@ def analyze_user_agent(test_packet):
     if res is not None:
         return parse_user_agent(res.group(1)), "HTTP (User-Agent)"
 
+
 if __name__ == "__main__":
     ANALYZERS = [analyze_tcp_opts, analyze_window_size, analyze_ttl, analyze_user_agent]
     parser = argparse.ArgumentParser()
@@ -104,7 +109,9 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--sniffer", help="run script in sniffer mode",
                         action="store_true")
     args = parser.parse_args()
-
+    # todo you're using argparser wrong.
+    # todo you don't have to raise exception, let it handle required arguments, see my question
+    # todo point is it should print "usage: ..."
     if (not args.sniffer) and (not args.file):
         raise argparse.ArgumentTypeError('-f or -s parameters has to be used')
     if args.file:
@@ -113,5 +120,6 @@ if __name__ == "__main__":
             analytic_res = analyzer_packet(ANALYZERS, item)
             if analytic_res is not None:
                 print analytic_res
+                # todo why does it work? you're returning tuple(result, who-am-i), then it prints in the opposite direction.. also in return documentation you should probably mention the tuple.
     else:
         sniff(prn=lambda x: analyzer_packet(ANALYZERS, x))
