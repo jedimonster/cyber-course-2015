@@ -5,7 +5,29 @@ import re
 import argparse
 
 captured = set()
-USER_AGENT_PATTERN = re.compile("User-Agent: (.*)\r\n")
+USER_AGENT_PATTERN = re.compile(r"User-Agent: (.*)\r\n")
+BROWSER_PATTERN = re.compile("(Chrome.*?|Firefox.*?|Opera.*?)(\s|$)")
+OS_PATTERN = re.compile(r"(Ubuntu|Windows)")
+OS_VERSION_PATTERN = re.compile(r"(Linux x86_64|Windows.*WOW64)")
+
+
+def parse_user_agent(ua):
+    """
+    If parsing fails(regex based, original ua returns)
+    :param ua: string - user agent string
+    :return: parsed string or string without changes if parsing failed
+    """
+    browser = re.search(BROWSER_PATTERN, ua)
+    operation_system = re.search(OS_PATTERN, ua)
+    os_version = re.search(OS_VERSION_PATTERN, ua)
+    if (browser is not None) and (operation_system is not None) and (os_version is not None):
+        try:
+            return operation_system.group(1)+" "+os_version.group(1).replace('WOW', "x").\
+                replace("10.0;", "10").replace(" NT ", "").replace("Windows","")+","+browser.group(1)
+        except:
+            return ua
+    return ua
+
 
 def analyzer_packet(analyzers, test_packet):
     """
@@ -67,18 +89,18 @@ def analyze_user_agent(test_packet):
     :return: user agent field in http protocol if exist
     """
     try:
-        data = test_packet[TCP][1]
+        data_l5 = test_packet[TCP][1]
     except:
         return None
-    data = str(data)
-    res = re.search(USER_AGENT_PATTERN, data)
+    data_l5 = str(data_l5)
+    res = re.search(USER_AGENT_PATTERN, data_l5)
     if res is not None:
-        return res.group(1), "HTTP (User-Agent)"
+        return parse_user_agent(res.group(1)), "HTTP (User-Agent)"
 
 if __name__ == "__main__":
     ANALYZERS = [analyze_tcp_opts, analyze_window_size, analyze_ttl, analyze_user_agent]
     parser = argparse.ArgumentParser()
-    parser.add_argument("-f", "--file", help="path to pcap file to be analized")
+    parser.add_argument("-f", "--file", help="path to cap file to be analized")
     parser.add_argument("-s", "--sniffer", help="run script in sniffer mode",
                         action="store_true")
     args = parser.parse_args()
