@@ -1,0 +1,1 @@
+We can run q1's code on the packet(s) sent in q2, if we get two different OS (for the same IP), we know we have a phony.
