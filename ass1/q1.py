@@ -3,11 +3,11 @@
 from scapy.all import *
 import re
 import argparse
+import sys
 
 captured = set()
 USER_AGENT_PATTERN = re.compile(r"User-Agent: (.*)\r\n")
-BROWSER_PATTERN = re.compile("(Chrome.*?|Firefox.*?|Opera.*?)(\s|$)")
-# todo does he want chromium or chrome? output sample says chromium.
+BROWSER_PATTERN = re.compile("(Chrome.*?|Firefox.*?|Opera.*?|Chromium.*?)(\s|$)")
 OS_PATTERN = re.compile(r"(Ubuntu|Windows)")
 OS_VERSION_PATTERN = re.compile(r"(Linux x86_64|Windows.*WOW64)")
 
@@ -25,7 +25,7 @@ def parse_user_agent(ua):
         try:
             return operation_system.group(1) + " " + os_version.group(1).replace('WOW', "x"). \
                 replace("10.0;", "10").replace(" NT ", "").replace("Windows", "") + "," + browser.group(1)
-        except:  # todo except what.. re.error? if we wanna be 100% gotta be specific
+        except re.error:
             return ua
     return ua
 
@@ -43,7 +43,7 @@ def analyzer_packet(analyzers, test_packet):
             res, method = res
             if IP in test_packet:
                 entry = ", ".join([method, test_packet[IP].src, res])
-                if entry not in captured:  # todo if it's a set, isn't this line redundant?
+                if entry not in captured:
                     captured.add(entry)
                     return entry
 
@@ -106,17 +106,14 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--sniffer", help="run script in sniffer mode",
                         action="store_true")
     args = parser.parse_args()
-    # todo you're using argparser wrong.
-    # todo you don't have to raise exception, let it handle required arguments, see my question
-    # todo point is it should print "usage: ..."
     if (not args.sniffer) and (not args.file):
-        raise argparse.ArgumentTypeError('-f or -s parameters has to be used')
+        print('Usage: [-f FILE] [-s] ')
+        sys.exit(1)
     if args.file:
         data = rdpcap(args.file)
         for item in data:
             analytic_res = analyzer_packet(ANALYZERS, item)
             if analytic_res is not None:
                 print analytic_res
-                # todo why does it work? you're returning tuple(result, who-am-i), then it prints in the opposite direction.. also in return documentation you should probably mention the tuple.
     else:
         sniff(prn=lambda x: analyzer_packet(ANALYZERS, x))
