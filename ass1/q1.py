@@ -89,6 +89,9 @@ def analyze_user_agent(test_packet):
     :param test_packet: packet to test
     :return: user agent field in http protocol if exist
     """
+    # If no tpc in packet dont need to check
+    if (TCP not in test_packet) or (not (test_packet.sport == 80 or test_packet.dport == 80)):
+        return None
     try:
         data_l5 = test_packet[TCP][1]
     except:
