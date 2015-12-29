@@ -50,7 +50,7 @@ class SpoofedTCPIPConnection(object):
 
     def _configure_iptables(self):
         """
-        add a rule to drop outgoing RST tcp packets
+        add a rule to drop outgoing RST tcp packets, so linux doesn't restart our connection
         """
         os.system('iptables -A OUTPUT -p tcp --tcp-flags RST RST -j DROP')
 
