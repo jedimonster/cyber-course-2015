@@ -25,7 +25,7 @@ class SpoofedTCPIPConnection(object):
                               seq=self._seq_num, ack=self._ack, flags='A') / data
         self._seq_num += len(data)
         response = sr1(pckt)
-        self._ack = response[TCP].seq + 1
+        self._ack = response[TCP].seq + 1  # todo make sure we need the +1
 
         print response.show()
 
@@ -33,15 +33,13 @@ class SpoofedTCPIPConnection(object):
         syn_pckt = self._ip / TCP(sport=self.src_port, dport=self.dst_port, flags='S',
                                   seq=self._seq_num)
         synack = sr1(syn_pckt)
-        tmp1 = synack.ack
-        tmp2 = synack.seq
         self._seq_num += 1
 
         if TCP in synack and synack[TCP].flags & (2 | 16):
             print "RCVED SYNACK"
             self._ack = synack[TCP].seq + 1
             ack_pckt = self._ip / TCP(sport=self.src_port, dport=self.dst_port, flags='A',
-                                      seq=tmp1, ack=tmp2+1)
+                                      seq=synack.ack, ack=synack.seq + 1)
             send(ack_pckt)
 
 
