@@ -1,20 +1,27 @@
 from scapy.all import *
 from netfilterqueue import NetfilterQueue
 
-REG_HTTP_GET = re.compile("^GET\s([A-Za-z0-9\-\._~:\?\\#]+)\sHTTP\/\d\.\d")
+REG_HTTP_GET = re.compile("^GET\s([A-Za-z0-9\/\-\._~:\?\\#]+)\sHTTP\/\d\.\d")
 
 
 class HttpInspector:
+    def __init__(self, filtered_extensions):
+        self.filtered_extensions = filtered_extensions
+
     def inspect(self, payload):
         if TCP in payload:
             layer5 = payload.payload
             results = re.search(REG_HTTP_GET, str(layer5))
+
             if results is not None:
-                print results.group(1)
+                url = results.group(1)
+
+                for extension in filtered_extensions:
+                    if url.find('.' + extension) != -1:
+                        print "Filtered packet for uri %s" % (url)
+                        return False
 
         return True
-        # import pdb; pdb.set_trace()
-        pass
 
 
 class IPSniffer(object):
@@ -56,9 +63,21 @@ class IPSniffer(object):
         pass
 
 
+def parse_config(file_path):
+    """
+    Parses config file and returns list of extensions that must be filtered
+    :param file_path: string
+    :return: list
+    """
+    with open(file_path, 'r') as f:
+        return f.read().split("\n")
+
+
 if __name__ == '__main__':
     os.system('iptables -A FORWARD -j NFQUEUE --queue-num 1')
-    inspector = HttpInspector()
+    filtered_extensions = parse_config('config')
+    print filtered_extensions
+    inspector = HttpInspector(filtered_extensions)
     sniffer = IPSniffer(inspector)
     nfqueue = NetfilterQueue()
     print "Starting queue"
