@@ -25,7 +25,7 @@ class SpoofedTCPIPConnection(object):
                               seq=self._seq_num, ack=self._ack, flags='A') / data
         self._seq_num += len(data)
         response = sr1(pckt)
-        self._ack = response[TCP].seq + 1  # todo make sure we need the +1
+        self._ack = response[TCP].seq + len(response[TCP].payload)
 
         print response.show()
 
@@ -69,9 +69,6 @@ class SpoofedTCPIPConnection(object):
         arp_pckt = ARP(hwdst='ff:ff:ff:ff:ff:ff', op=ARP.is_at, psrc=self.src_ip, pdst=dest_ip)
         send(arp_pckt)
 
-    def maintain(self):
-        pass
-
 
 if __name__ == '__main__':
     src_ip = '192.168.1.17'
@@ -82,6 +79,5 @@ if __name__ == '__main__':
     c = SpoofedTCPIPConnection(src_ip, src_port, dst_ip, dst_port)
 
     c.connect()
-    c.maintain()
     c.send_data('GET / HTTP/1.0\r\n\r\n')
     c.close()

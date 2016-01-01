@@ -20,10 +20,20 @@ class HttpInspector:
                 for extension in filtered_extensions:
                     if url.find('.' + extension) != -1:
                         print "Filtered packet for uri %s" % (url)
-
+                        if not self.silent:
+                            self._send_error_page(packet)
                         return False
 
         return True
+
+    def _send_error_page(self, packet):
+        ip_packet = IP(src=packet.dst, dst=packet.src)
+        tcp_packet = TCP(sport=packet.dport, dport=packet.sport, seq=packet.ack, flags='A',
+                         ack=packet.seq + len(packet[TCP].payload))
+        with open('dropped.html') as fh:
+            error_page = fh.read()
+            error_packet = ip_packet / tcp_packet / error_page
+            send(error_packet)
 
 
 class IPSniffer(object):
