@@ -51,28 +51,40 @@ class IPSniffer(object):
         if IP in scapy_packet:
 
             # check more fragments flag
-            sess = (scapy_packet.src, scapy_packet.dst)
+            sess = (scapy_packet.src, scapy_packet.dst, scapy_packet[IP].id)
             if scapy_packet[IP].flags & 1 > 0:  # there are more fragments
+                pkt.accept()  # we'll drop the last fragment if it's malicious.
                 if sess in self._sesssion_fragments_dict:
                     self._sesssion_fragments_dict[sess].append(scapy_packet)
                 else:
                     self._sesssion_fragments_dict[sess] = [scapy_packet]
             else:  # no more fragments
-                if scapy_packet.src not in self._sesssion_fragments_dict:
+                if sess not in self._sesssion_fragments_dict:
                     if self.inspector.inspect(scapy_packet[IP]):
                         pkt.accept()
                     else:
                         pkt.drop()
                 # need to reconstruct the packet
                 else:
-                    # todo this isn't handled yet.
+                    self._sesssion_fragments_dict[sess].append(scapy_packet)
                     reconstructed_pkt = self._reconstruct_fragments(self._sesssion_fragments_dict[sess])
+                    if self.inspector.inspect(reconstructed_pkt):
+                        pkt.accept()
+                    else:
+                        pkt.drop()
                     self._sesssion_fragments_dict[sess] = None
         else:
             pkt.accept()
 
-    def _reconstruct_fragments(self, param):
-        pass
+    def _reconstruct_fragments(self, scapy_packets):
+        # scapy_packets = [IP(x.get_payload()) for x in pkts]
+        # sort by offset
+
+        sorted_packets = sorted(scapy_packets, key=lambda x: x[IP].frag)
+        payloads = "".join([str(x.payload) for x in sorted_packets])
+        reconstructed_packet = IP(sorted_packets[-1][IP].build()[:20]) / TCP(payloads)
+        print reconstructed_packet.show()
+        return reconstructed_packet
 
 
 def parse_config(file_path):
