@@ -25,8 +25,12 @@ class SpoofedTCPIPConnection(object):
                               seq=self._seq_num, ack=self._ack, flags='A') / data
         self._seq_num += len(data)
         response = sr1(pckt)
-        self._ack = response[TCP].seq + len(response[TCP].payload)
+        if Padding in response:
+            self._ack = response[TCP].seq + len(response[TCP].payload) - len(response[Padding])
+        else:
+            self._ack = response[TCP].seq + len(response[TCP].payload)
 
+        print "ack = %d" % (self._ack)
         print response.show()
 
     def _handshake(self):
