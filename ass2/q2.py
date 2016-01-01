@@ -5,12 +5,13 @@ REG_HTTP_GET = re.compile("^GET\s([A-Za-z0-9\/\-\._~:\?\\#]+)\sHTTP\/\d\.\d")
 
 
 class HttpInspector:
-    def __init__(self, filtered_extensions):
+    def __init__(self, filtered_extensions, silent):
+        self.silent = silent
         self.filtered_extensions = filtered_extensions
 
-    def inspect(self, payload):
-        if TCP in payload:
-            layer5 = payload.payload
+    def inspect(self, packet):
+        if TCP in packet:
+            layer5 = packet[TCP].payload
             results = re.search(REG_HTTP_GET, str(layer5))
 
             if results is not None:
@@ -19,6 +20,7 @@ class HttpInspector:
                 for extension in filtered_extensions:
                     if url.find('.' + extension) != -1:
                         print "Filtered packet for uri %s" % (url)
+
                         return False
 
         return True
@@ -47,7 +49,7 @@ class IPSniffer(object):
                     self._sesssion_fragments_dict[sess] = [scapy_packet]
             else:  # no more fragments
                 if scapy_packet.src not in self._sesssion_fragments_dict:
-                    if self.inspector.inspect(scapy_packet[IP].payload):
+                    if self.inspector.inspect(scapy_packet[IP]):
                         pkt.accept()
                     else:
                         pkt.drop()
@@ -74,13 +76,12 @@ def parse_config(file_path):
 
 
 if __name__ == '__main__':
+    silent = False
     os.system('iptables -A FORWARD -j NFQUEUE --queue-num 1')
     filtered_extensions = parse_config('config')
-    print filtered_extensions
-    inspector = HttpInspector(filtered_extensions)
+    inspector = HttpInspector(filtered_extensions, silent)
     sniffer = IPSniffer(inspector)
     nfqueue = NetfilterQueue()
-    print "Starting queue"
 
     nfqueue.bind(1, lambda x: sniffer.process_packet(x))
     try:
