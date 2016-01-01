@@ -98,7 +98,7 @@ def parse_config(file_path):
 
 
 if __name__ == '__main__':
-    silent = True
+    silent = False
     os.system('iptables -A FORWARD -j NFQUEUE --queue-num 1')
     filtered_extensions = parse_config('config')
     inspector = HttpInspector(filtered_extensions, silent)
