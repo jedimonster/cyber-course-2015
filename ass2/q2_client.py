@@ -9,7 +9,7 @@ from scapy.tools.UTscapy import sha1
 from q1 import SpoofedTCPIPConnection
 
 if __name__ == '__main__':
-    src_ip = '192.168.1.17'
+    src_ip = '192.168.1.1'
     src_port = random.randint(1024, 65535)
     dst_ip = '192.168.1.2'
     dst_port = 8080
