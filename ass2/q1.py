@@ -1,5 +1,8 @@
 from scapy.all import *
 import thread
+import time
+import codecs
+from scapy.tools.UTscapy import sha1
 
 
 class SpoofedTCPIPConnection(object):
@@ -75,7 +78,7 @@ class SpoofedTCPIPConnection(object):
 
 
 if __name__ == '__main__':
-    src_ip = '192.168.1.17'
+    src_ip = '192.168.1.1'
     src_port = random.randint(1024, 65535)
     dst_ip = '192.168.1.2'
     dst_port = 8080
@@ -83,5 +86,23 @@ if __name__ == '__main__':
     c = SpoofedTCPIPConnection(src_ip, src_port, dst_ip, dst_port)
 
     c.connect()
-    c.send_data('GET / HTTP/1.0\r\n\r\n')
+    # c.send_data('GET / HTTP/1.0\r\n\r\n')
+
+    # sending requet with secret header
+    with codecs.open("client_secret", encoding='utf-8') as f:
+        client_secret = f.read().replace('\n', "")
+        current_time = int(time.time()) << 3
+        print sha1(client_secret + current_time)
+        c.send_data('GET / HTTP/1.0\r\n' +
+                    "secret: " + sha1(str(client_secret) + current_time) + "\r\n"
+                                                                           '\r\n')
+        print "*" * 60
+        print client_secret
+        print current_time
+        print sha1(str(client_secret) + current_time)
+        import pdb;
+
+        pdb.set_trace()
+        pass
+
     c.close()
