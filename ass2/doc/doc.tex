@@ -1,0 +1,29 @@
+\documentclass{report}
+
+
+\begin{document}
+\author{Yuri Shafet, Itay Azaria}
+\title{Assignment 2}
+\maketitle
+
+\section*{Question 1}
+You can find pcap of spoofing attack in pcap folder.
+Attack proceed as follows:
+
+We first perform ARP poisoning(code only on client side), by listening to ARP packets, and sending fake response. After ARP poisoning is done we perform 3 way handshake with server, and using fake IP for spoofing.
+
+\section*{Question 2}
+
+To prevent IP spoofing now every legitimate client has his unique secret(only client and server knows it), when client wants to send HTTP request, it has to add \emph{secret} header to request and add following : sha1(unique-secret + current-time). When server receives requests, it looks in its secret table, where all secret$/$ip stored for client secret,  calculates hash and compares it. If it is equal, know client wants to communicate, if not, request will be denied with error message .
+
+You can find in pcap folder 2 pcaps, one when request is spoofing and error is returned to client, and second is legitimate one.
+
+\section*{Question 3}
+\begin{enumerate}
+\item 
+	You can find caps of blocked communication when client wants to download file with ending that should be stopped. One of caps is normal request, the other one is fragmented(2 fragments).
+	
+	If we detect that communication is fragmented we store packets in buffer, until last packet of fragment arrives (flag MF is 0) and we reconstruct the packet. If uri is OK, we accept it, otherwise we decline it.
+
+\end{enumerate}
+\end{document}
