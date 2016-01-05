@@ -1,5 +1,9 @@
+import argparse
+import json
 from scapy.all import *
 from netfilterqueue import NetfilterQueue
+
+from scapy.tools.UTscapy import sha1
 
 REG_HTTP_GET = re.compile("^GET\s([A-Za-z0-9\/\-\._~:\?\\#]+)\sHTTP\/\d\.\d")
 
@@ -97,17 +101,76 @@ def parse_config(file_path):
         return f.read().split("\n")
 
 
+class SSHInspector(object):
+    def __init__(self):
+        self._allowed_connections = set()
+
+    def inspect(self, pkt):
+        scapy_packet = IP(pkt.get_payload())
+
+        if TCP in scapy_packet:
+            client_ip = scapy_packet[IP].src
+            client_secret = self._get_client_secret(client_ip)
+
+            # magic packet - open port?
+            if scapy_packet[TCP].dport == 4242:
+
+                current_time = time.time() << 3
+                correct_hash = sha1(client_secret + current_time)
+
+                if (correct_hash == scapy_packet[TCP].payload):
+                    if scapy_packet[TCP].flags == "S":
+                        print "Accepting SSH from %s" % (client_ip)
+                        self._allowed_connections.add(client_ip)
+                    elif scapy_packet[TCP].flags == "F":
+                        print "Rejecting SSH from %s" % (client_ip)
+                        self._allowed_connections.remove(client_ip)
+
+
+            # SSH - is he authorized?
+            elif scapy_packet[TCP].dport == 22:
+                return client_ip in self._allowed_connections
+
+    def _get_client_secret(self, ip):
+        with open('secrets.json') as fh:
+            secrets_list = json.load(fh)
+            secrets = dict([(ip_secret['ip'], ip_secret['secret']) for ip_secret in secrets_list])
+            return secrets[ip]
+
+
+class ChainedInspector(object):
+    def __init__(self, *inspectors):
+        self.inspectors = inspectors
+
+    def inspect(self, pkt):
+        for inspector in self.inspectors:
+            if not inspector.inspect(pkt):
+                return False
+
+        return True
+
+
 if __name__ == '__main__':
-    silent = False
+    parser = argparse.ArgumentParser(description='Blocks forwarding of HTTP requests for restricted file types.')
+    parser.add_argument('--silent', dest='silent', action='store_true',
+                        help='Whether to reply with an error or silently drop')
+
+    args = parser.parse_args()
+    silent = args.silent
+
     os.system('iptables -A FORWARD -j NFQUEUE --queue-num 1')
     filtered_extensions = parse_config('config')
-    inspector = HttpInspector(filtered_extensions, silent)
-    sniffer = IPSniffer(inspector)
+    http_inspector = HttpInspector(filtered_extensions, silent)
+    ssh_inspector = SSHInspector()
+    multi_inspector = ChainedInspector(ssh_inspector, http_inspector)
+    sniffer = IPSniffer(http_inspector)
     nfqueue = NetfilterQueue()
 
-    nfqueue.bind(1, lambda x: sniffer.process_packet(x))
     try:
+        nfqueue.bind(1, lambda x: sniffer.process_packet(x))
         nfqueue.run()
     except KeyboardInterrupt:
+        pass
+    finally:
         os.system('iptables -F')
         os.system('iptables -X')
