@@ -20,11 +20,11 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def do_GET(self):
         """Respond to a GET request."""
+        # we have self.path, self.client_address which is (ip, port), and self.headers
         if not self._verify_request():
             self.send_response(401)
             return
 
-        # we have self.path, self.client_address which is (ip, port), and self.headers
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
@@ -35,6 +35,7 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
 
     def _verify_request(self):
         ip = self.client_address[0]
+        path = self.path
         try:
             secret = self._get_client_secret()
             client_hash = self.headers['secret']
@@ -42,7 +43,7 @@ class MyHandler(BaseHTTPServer.BaseHTTPRequestHandler):
             return False
 
         current_time = int(time.time()) << 3
-        hash = sha1(str(secret) + str(current_time))
+        hash = sha1(str(secret) + str(current_time) + str(path))
         return hash == client_hash
 
     def _get_client_secret(self):
