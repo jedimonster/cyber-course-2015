@@ -105,31 +105,41 @@ class SSHInspector(object):
     def __init__(self):
         self._allowed_connections = set()
 
-    def inspect(self, pkt):
-        scapy_packet = IP(pkt.get_payload())
+    def inspect(self, scapy_packet):
 
         if TCP in scapy_packet:
             client_ip = scapy_packet[IP].src
-            client_secret = self._get_client_secret(client_ip)
-
+            # hashable set
+            session = frozenset([client_ip, scapy_packet[IP].dst])
+            # import pdb; pdb.set_trace()
             # magic packet - open port?
             if scapy_packet[TCP].dport == 4242:
+                try:
+                    client_secret = self._get_client_secret(client_ip)
+                except KeyError:
+                    import pdb;pdb.set_trace()
+                    print "KeyError"
+                    return False
 
-                current_time = time.time() << 3
-                correct_hash = sha1(client_secret + current_time)
+                current_time = int(time.time()) << 3
+                correct_hash = sha1(client_secret + str(current_time))
 
-                if (correct_hash == scapy_packet[TCP].payload):
-                    if scapy_packet[TCP].flags == "S":
-                        print "Accepting SSH from %s" % (client_ip)
-                        self._allowed_connections.add(client_ip)
-                    elif scapy_packet[TCP].flags == "F":
+                if (correct_hash == str(scapy_packet[TCP].payload)):
+                    if scapy_packet[TCP].flags == 2:
+                        print "Accepting SSH from %s" % (session)
+                        self._allowed_connections.add(session)
+                    elif scapy_packet[TCP].flags == 1:
                         print "Rejecting SSH from %s" % (client_ip)
-                        self._allowed_connections.remove(client_ip)
+                        self._allowed_connections.remove(session)
 
 
             # SSH - is he authorized?
-            elif scapy_packet[TCP].dport == 22:
-                return client_ip in self._allowed_connections
+            elif scapy_packet[TCP].dport == 22 or scapy_packet[TCP].sport == 22:
+                print '*'*60
+                print session
+                print self._allowed_connections
+                print '&'*60
+                return session in self._allowed_connections
 
     def _get_client_secret(self, ip):
         with open('secrets.json') as fh:
@@ -163,7 +173,7 @@ if __name__ == '__main__':
     http_inspector = HttpInspector(filtered_extensions, silent)
     ssh_inspector = SSHInspector()
     multi_inspector = ChainedInspector(ssh_inspector, http_inspector)
-    sniffer = IPSniffer(http_inspector)
+    sniffer = IPSniffer(multi_inspector)
     nfqueue = NetfilterQueue()
 
     try:
