@@ -159,6 +159,7 @@ class SSHInspector(object):
                 # print self._allowed_connections
                 # print '&'*60
                 return session in self._allowed_connections
+        return True
 
     def _get_client_secret(self, ip):
         with open('secrets.json') as fh:
@@ -192,7 +193,7 @@ if __name__ == '__main__':
     http_inspector = HttpInspector(filtered_extensions, silent)
     ssh_inspector = SSHInspector()
     multi_inspector = ChainedInspector(ssh_inspector, http_inspector)
-    sniffer = IPSniffer(http_inspector)
+    sniffer = IPSniffer(multi_inspector)
     nfqueue = NetfilterQueue()
 
     try:
