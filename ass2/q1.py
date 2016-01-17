@@ -43,6 +43,7 @@ class SpoofedTCPIPConnection(object):
         syn_pckt = self._ip / TCP(sport=self.src_port, dport=self.dst_port, flags='S',
                                   seq=self._seq_num)
         synack = sr1(syn_pckt)
+
         self._seq_num += 1
 
         if TCP in synack and synack[TCP].flags & (2 | 16):
