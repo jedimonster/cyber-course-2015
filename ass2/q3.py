@@ -103,7 +103,7 @@ class IPSniffer(object):
 
         payloads = "".join([str(x.payload) for x in pkts])
         if pkts[-1][IP].proto == IP_PROTOCOLS_TCP:
-            payloads = TCP(payloads) # we don't current support UDP inspections.
+            payloads = TCP(payloads)  # we don't current support UDP inspections.
 
         reconstructed_packet = IP(pkts[-1][IP].build()[:20]) / payloads
 
@@ -123,6 +123,7 @@ def parse_config(file_path):
 class SSHInspector(object):
     def __init__(self):
         self._allowed_connections = set()
+        self.client_challenges = dict()
 
     def inspect(self, scapy_packet):
 
@@ -133,25 +134,28 @@ class SSHInspector(object):
             # import pdb; pdb.set_trace()
             # magic packet - open port?
             if scapy_packet[TCP].dport == 4242:
-                try:
-                    client_secret = self._get_client_secret(client_ip)
-                except KeyError:
-                    import pdb;
-                    pdb.set_trace()
-                    print "KeyError"
-                    return False
-
-                current_time = int(time.time()) << 3
-                correct_hash = sha1(client_secret + str(current_time))
-
-                if (correct_hash == str(scapy_packet[TCP].payload)):
-                    if scapy_packet[TCP].flags == 2:
-                        print "Accepting SSH from %s" % (session)
-                        self._allowed_connections.add(session)
-                    elif scapy_packet[TCP].flags == 1:
-                        print "Rejecting SSH from %s" % (client_ip)
-                        self._allowed_connections.remove(session)
+                self._handle_first_knock(scapy_packet)
                 return True
+            elif scapy_packet[TCP].dport == 4243:
+                self._handle_second_knock(scapy_packet)
+                return True
+                # try:
+                #     client_secret = self._get_client_secret(client_ip)
+                # except KeyError:
+                #     print "Unknown client trying to knock."
+                #     return False
+                #
+                # current_time = int(time.time()) << 3
+                # correct_hash = sha1(client_secret + str(current_time))
+                #
+                # if correct_hash == str(scapy_packet[TCP].payload):
+                #     if scapy_packet[TCP].flags == 2:
+                #         print "Accepting SSH from %s" % (session)
+                #         self._allowed_connections.add(session)
+                #     elif scapy_packet[TCP].flags == 1:
+                #         print "Rejecting SSH from %s" % (client_ip)
+                #         self._allowed_connections.remove(session)
+                # return True
             # SSH - is he authorized?
             elif scapy_packet[TCP].dport == 22 or scapy_packet[TCP].sport == 22:
                 # print '*'*60
@@ -166,6 +170,30 @@ class SSHInspector(object):
             secrets_list = json.load(fh)
             secrets = dict([(ip_secret['ip'], ip_secret['secret']) for ip_secret in secrets_list])
             return secrets[ip]
+
+    def _handle_first_knock(self, scapy_packet):
+        """
+        sends a challenge to the client
+        :param scapy_packet:
+        """
+        client_ip = scapy_packet[IP].src
+        try:
+            client_secret = self._get_client_secret(client_ip)
+        except KeyError:
+            print "Unknown client trying to knock."
+            return False
+
+        correct_hash = sha1(client_secret)
+        if correct_hash == str(scapy_packet[TCP].payload):
+            self._send_challenge(scapy_packet)
+
+    def _send_challenge(self, scapy_packet):
+        client_ip = scapy_packet[IP].src
+        challenge = random.randint(0, 2 ^ 32)
+        self.client_challenges[client_ip] = challenge
+
+        pkt = IP(src=scapy_packet[IP].dst, dst=client_ip) / TCP(seq=random.randint(0, 2 ^ 32),
+                                                                ack=scapy_packet[TCP].seq + 1) / challenge
 
 
 class ChainedInspector(object):
