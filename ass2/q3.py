@@ -68,6 +68,9 @@ class IPSniffer(object):
             if full_packet is None:
                 # packet is a fragment of a bigger packet, we accept it,
                 # and we'll reject, if needed, when we can reconstruct the entire thing.
+                print "Accepting partial packet"
+                import pdb
+                pdb.set_trace()
                 pkt.accept()
             else:
                 # this is either a stand alone packet, a reconstructed packet,
@@ -131,14 +134,13 @@ class SSHInspector(object):
             client_ip = scapy_packet[IP].src
             # hashable set
             session = frozenset([client_ip, scapy_packet[IP].dst])
-            # import pdb; pdb.set_trace()
             # magic packet - open port?
             if scapy_packet[TCP].dport == 4242:
                 self._handle_first_knock(scapy_packet)
-                return True
+                return False
             elif scapy_packet[TCP].dport == 4243:
                 self._handle_second_knock(scapy_packet)
-                return True
+                return False
                 # try:
                 #     client_secret = self._get_client_secret(client_ip)
                 # except KeyError:
@@ -186,14 +188,38 @@ class SSHInspector(object):
         correct_hash = sha1(client_secret)
         if correct_hash == str(scapy_packet[TCP].payload):
             self._send_challenge(scapy_packet)
+        else:
+            print "Received invalid knock"
+            print scapy_packet.show()
 
     def _send_challenge(self, scapy_packet):
         client_ip = scapy_packet[IP].src
-        challenge = random.randint(0, 2 ^ 32)
+        challenge = random.randint(0, 2 ** 32)
         self.client_challenges[client_ip] = challenge
 
-        pkt = IP(src=scapy_packet[IP].dst, dst=client_ip) / TCP(seq=random.randint(0, 2 ^ 32),
-                                                                ack=scapy_packet[TCP].seq + 1) / challenge
+        pkt = IP(src=scapy_packet[IP].dst, dst=client_ip) / TCP(seq=random.randint(0, 2 ** 32),
+                                                                ack=scapy_packet[TCP].seq + 1,
+                                                                sport=scapy_packet[TCP].dport,
+                                                                dport=scapy_packet[TCP].sport) / str(challenge)
+        print pkt.show()
+        send(pkt)
+
+    def _handle_second_knock(self, scapy_packet):
+        client_ip = scapy_packet[IP].src
+        client_response = scapy_packet[Raw].load
+        client_secret = self._get_client_secret(client_ip)
+        try:
+            challenge = self.client_challenges[client_ip]
+        except KeyError:  # aha! someone tried to get smart.
+            return
+        correct_response = sha1('weeeeeee' + str(challenge))
+
+        if correct_response == client_response:
+            session = frozenset([client_ip, scapy_packet[IP].dst])
+            self._allowed_connections.add(session)
+            print "Allowing connections for session %r" % session
+        else:
+            print "Wrong response received"
 
 
 class ChainedInspector(object):
