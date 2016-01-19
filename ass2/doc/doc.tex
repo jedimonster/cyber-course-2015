@@ -14,7 +14,7 @@ We first perform ARP poisoning(code only on client side), by listening to ARP pa
 
 \section*{Question 2}
 
-To prevent IP spoofing now every legitimate client has his unique secret(only client and server knows it), when client wants to send HTTP request, it has to add \emph{secret} header to request and add following : sha1(unique-secret + current-time). When server receives requests, it looks in its secret table, where all secret$/$ip stored for client secret,  calculates hash and compares it. If it is equal, know client wants to communicate, if not, request will be denied with error message .
+To prevent IP spoofing now every legitimate client has his unique secret(only client and server knows it), secret is unique per IP, when client wants to send HTTP request, it has to add \emph{secret} header to request and add following : sha1(unique-secret + data). When server receives requests, it looks in its secret table, where all secret$/$ip stored for client secret,  calculates hash and compares it. If it is equal, know client wants to communicate, if not, request will be denied with error message .
 
 You can find in pcap folder 2 pcaps, one when request is spoofing and error is returned to client, and second is legitimate one.
 
@@ -23,7 +23,12 @@ You can find in pcap folder 2 pcaps, one when request is spoofing and error is r
 \item 
 	You can find caps of blocked communication when client wants to download file with ending that should be stopped. One of caps is normal request, the other one is fragmented(2 fragments).
 	
-	If we detect that communication is fragmented we store packets in buffer, until last packet of fragment arrives (flag MF is 0) and we reconstruct the packet. If uri is OK, we accept it, otherwise we decline it.
+	We also take care of fragmented packets by storing packets in buffer and reconstructing them when possible. Packets released from buffer using timeout timer.
+
+\item
+	We use two knows for user to open SSH port. First knock to port 4242 with specific HMAC, if HMAC correct, server will send back challenge to client, and client will have to return HMAC (client uniquekey+challenge). Because key is unique per IP , it prevents IP spoofing, and challenge-response prevents reply attacks. Server will open port if HMAC is correct. You can find relevant pcaps in pcap folder. 
+	
+
 
 \end{enumerate}
 \end{document}
