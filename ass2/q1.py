@@ -83,11 +83,11 @@ class SpoofedTCPIPConnection(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Send HTTP Request from fake IP address to specified destination')
-    parser.add_argument('src', type=str, nargs=1,
+    parser.add_argument('-s', '--src', type=str, nargs=1,
                         help='source  IP')
-    parser.add_argument('dst', type=str, nargs=1,
+    parser.add_argument('-d', '--dst', type=str, nargs=1,
                         help='destination IP')
-    parser.add_argument('msg', type=str, nargs=1,
+    parser.add_argument('-m', '--msg', type=str, nargs=1,
                         help='path')
     args = parser.parse_args()
 
@@ -96,6 +96,8 @@ if __name__ == '__main__':
     path = args.msg[0]
     src_port = random.randint(1025, 65535)
     dst_port = 8080
+
+    print "Connecting from %s to %s, sending http GET for %s" % (src_ip, dst_ip, path)
 
     c = SpoofedTCPIPConnection(src_ip, src_port, dst_ip, dst_port)
 
