@@ -55,22 +55,32 @@ class IPSniffer(object):
         scapy_packet = IP(pkt.get_payload())
 
         if IP in scapy_packet:
-            # check more fragments flag
+            # check MF=0 and offset = 0 (lone packet)
+            if scapy_packet[IP].frag == 0 and scapy_packet[IP].flags & 1 == 0:
+                if self.inspector.inspect(scapy_packet):
+                    pkt.accept()
+                else:
+                    pkt.drop()
+
+                return
+
             sess = (scapy_packet.src, scapy_packet.dst, scapy_packet[IP].id)
             session_fragments = self._sesssion_fragments_dict[sess]
             session_fragments.append(scapy_packet)
+
             # remove the packet from our cache in X seconds:
-            Timer(30, lambda: session_fragments.remove(scapy_packet))
-            # TODO clear empty key #########################@@@@@@@@@@@@@@@^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            def cache_cleaner():
+                session_fragments.remove(scapy_packet)
+                if len(session_fragments) == 0:
+                    del self._sesssion_fragments_dict[sess]
+
+            Timer(30, cache_cleaner)
 
             full_packet = self._reconstruct_fragments(sess)
 
             if full_packet is None:
                 # packet is a fragment of a bigger packet, we accept it,
                 # and we'll reject, if needed, when we can reconstruct the entire thing.
-                print "Accepting partial packet"
-                import pdb
-                pdb.set_trace()
                 pkt.accept()
             else:
                 # this is either a stand alone packet, a reconstructed packet,
@@ -79,7 +89,6 @@ class IPSniffer(object):
                 if self.inspector.inspect(full_packet):
                     pkt.accept()
                 else:
-                    print "dropped for one reason or another"
                     pkt.drop()
 
         else:

@@ -11,6 +11,5 @@ if __name__ == '__main__':
     c = SpoofedTCPIPConnection(src_ip, src_port, dst_ip, dst_port)
 
     c.connect()
-    c.send_data('GET /test.exe ')
-    c.send_data('HTTP/1.0\r\n\r\n')
+    c.send_data('GET /test.exe HTTP/1.0\r\n\r\n')
     c.close()
