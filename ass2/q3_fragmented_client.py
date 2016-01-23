@@ -6,7 +6,7 @@ if __name__ == '__main__':
     dst_ip = '172.16.1.1'
     src_ip = '192.168.1.1'
     ip = IP(src=src_ip, dst=dst_ip, proto='tcp')
-    payload = 'GET /a.exe HTTP/1.0\r\n' \
+    payload = 'GET /a.txt HTTP/1.0\r\n' \
               'Sheker: VGaaaaaaaaS\r\n\r\n'
     src_port = random.randint(1, 65000)
     # print src_port
