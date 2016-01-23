@@ -23,6 +23,7 @@ class HttpInspector:
             if results is not None:
                 url = results.group(1)
 
+
                 for extension in filtered_extensions:
                     if url.find('.' + extension) != -1:
                         print "Filtered packet for uri %s" % (url)
@@ -109,7 +110,9 @@ class IPSniffer(object):
 
         next_offset = 0
         for pkt in pkts:
-            if next_offset != pkt[IP].frag:
+
+            if next_offset/8 != pkt[IP].frag:
+                # import pdb; pdb.set_trace()
                 return None
             next_offset += len(pkt.payload)
 

@@ -27,8 +27,6 @@ if __name__ == '__main__':
                             seq=synack.ack, ack=synack.seq + 1)
         send(ack_pckt)
 
-
-
     tcp_packet = ip / TCP(sport=src_port, dport=8080, seq=1001, ack=synack.seq + 1, flags="A") / payload
     tcp_raw = tcp_packet.build()
 
