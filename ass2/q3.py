@@ -1,12 +1,18 @@
 import argparse
 import json
+import random
+import re
+import os
+from collections import defaultdict
 from netfilterqueue import NetfilterQueue
 from threading import Timer
-
-from scapy.all import *
+from scapy.packet import Raw
 from scapy.tools.UTscapy import sha1
+from scapy.sendrecv import srp, send, sr1
+from scapy import route  # despite what PyCharm might claim, this is used.
+from scapy.layers.inet import TCP, IP
 
-REG_HTTP_GET = re.compile("^GET\s([A-Za-z0-9\/\-\._~:\?\\#]+)\sHTTP\/\d\.\d")
+REG_HTTP_GET = re.compile("^GET\s([A-Za-z0-9/\-\._~:\?#]+)\sHTTP/\d\.\d")
 IP_PROTOCOLS_TCP = 6
 
 
@@ -23,20 +29,23 @@ class HttpInspector:
             if results is not None:
                 url = results.group(1)
 
-
-                for extension in filtered_extensions:
+                for extension in filter_extensions:
                     if url.find('.' + extension) != -1:
-                        print "Filtered packet for uri %s" % (url)
+                        print "Filtered packet for uri %s" % url
                         if not self.silent:
                             self._send_error_page(packet)
                         return False
 
         return True
 
-    def _send_error_page(self, packet):
-        ip_packet = IP(src=packet.dst, dst=packet.src)
-        tcp_packet = TCP(sport=packet.dport, dport=packet.sport, seq=packet.ack, flags='A',
-                         ack=packet.seq + len(packet[TCP].payload))
+    @staticmethod
+    def _send_error_page(http_pkt):
+        """
+        responds to the given http request with an error page
+        """
+        ip_packet = IP(src=http_pkt.dst, dst=http_pkt.src)
+        tcp_packet = TCP(sport=http_pkt.dport, dport=http_pkt.sport, seq=http_pkt.ack, flags='A',
+                         ack=http_pkt.seq + len(http_pkt[TCP].payload))
         with open('dropped.html') as fh:
             error_page = fh.read()
             error_packet = ip_packet / tcp_packet / error_page
@@ -51,7 +60,8 @@ class IPSniffer(object):
     def process_packet(self, pkt):
         """
         handles IP fragmentation and passes packets to inspection
-        :param scapy_packet:
+        :param pkt:
+        :return:
         """
         scapy_packet = IP(pkt.get_payload())
 
@@ -64,6 +74,9 @@ class IPSniffer(object):
                     pkt.drop()
 
                 return
+
+            # otherwise the packet is fragmented. our strategy is that we allow it through
+            # until the last fragment arrives, then inspect the full packet and drop or accept the last fragment.
 
             sess = (scapy_packet.src, scapy_packet.dst, scapy_packet[IP].id)
             session_fragments = self._sesssion_fragments_dict[sess]
@@ -111,7 +124,7 @@ class IPSniffer(object):
         next_offset = 0
         for pkt in pkts:
 
-            if next_offset/8 != pkt[IP].frag:
+            if next_offset / 8 != pkt[IP].frag:
                 # import pdb; pdb.set_trace()
                 return None
             next_offset += len(pkt.payload)
@@ -141,45 +154,29 @@ class SSHInspector(object):
         self.client_challenges = dict()
 
     def inspect(self, scapy_packet):
-
         if TCP in scapy_packet:
             client_ip = scapy_packet[IP].src
             # hashable set
             session = frozenset([client_ip, scapy_packet[IP].dst])
+
             # magic packet - open port?
             if scapy_packet[TCP].dport == 4242:
                 self._handle_first_knock(scapy_packet)
                 return False
+
+            # second knock, should be the response of challenge-response.
             elif scapy_packet[TCP].dport == 4243:
                 self._handle_second_knock(scapy_packet)
                 return False
-                # try:
-                #     client_secret = self._get_client_secret(client_ip)
-                # except KeyError:
-                #     print "Unknown client trying to knock."
-                #     return False
-                #
-                # current_time = int(time.time()) << 3
-                # correct_hash = sha1(client_secret + str(current_time))
-                #
-                # if correct_hash == str(scapy_packet[TCP].payload):
-                #     if scapy_packet[TCP].flags == 2:
-                #         print "Accepting SSH from %s" % (session)
-                #         self._allowed_connections.add(session)
-                #     elif scapy_packet[TCP].flags == 1:
-                #         print "Rejecting SSH from %s" % (client_ip)
-                #         self._allowed_connections.remove(session)
-                # return True
+
             # SSH - is he authorized?
             elif scapy_packet[TCP].dport == 22 or scapy_packet[TCP].sport == 22:
-                # print '*'*60
-                # print session
-                # print self._allowed_connections
-                # print '&'*60
                 return session in self._allowed_connections
+
         return True
 
-    def _get_client_secret(self, ip):
+    @staticmethod
+    def _get_client_secret(ip):
         with open('secrets.json') as fh:
             secrets_list = json.load(fh)
             secrets = dict([(ip_secret['ip'], ip_secret['secret']) for ip_secret in secrets_list])
@@ -202,7 +199,6 @@ class SSHInspector(object):
             self._send_challenge(scapy_packet)
         else:
             print "Received invalid knock"
-            print scapy_packet.show()
 
     def _send_challenge(self, scapy_packet):
         client_ip = scapy_packet[IP].src
@@ -213,13 +209,11 @@ class SSHInspector(object):
                                                                 ack=scapy_packet[TCP].seq + 1,
                                                                 sport=scapy_packet[TCP].dport,
                                                                 dport=scapy_packet[TCP].sport) / str(challenge)
-        print pkt.show()
         send(pkt)
 
     def _handle_second_knock(self, scapy_packet):
         client_ip = scapy_packet[IP].src
         client_response = scapy_packet[Raw].load
-        client_secret = self._get_client_secret(client_ip)
         try:
             challenge = self.client_challenges[client_ip]
         except KeyError:  # aha! someone tried to get smart.
@@ -247,16 +241,17 @@ class ChainedInspector(object):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Blocks forwarding of HTTP requests for restricted file types.')
+    parser = argparse.ArgumentParser(description='Blocks forwarding of HTTP requests for restricted file types, '
+                                                 'and blocks SSH unless TCP port knocking was used')
     parser.add_argument('--silent', dest='silent', action='store_true',
                         help='Whether to reply with an error or silently drop')
 
     args = parser.parse_args()
-    silent = args.silent
+    http_silent = args.silent
 
     os.system('iptables -A FORWARD -j NFQUEUE --queue-num 1')
-    filtered_extensions = parse_config('config')
-    http_inspector = HttpInspector(filtered_extensions, silent)
+    filter_extensions = parse_config('config')
+    http_inspector = HttpInspector(filter_extensions, http_silent)
     ssh_inspector = SSHInspector()
     multi_inspector = ChainedInspector(ssh_inspector, http_inspector)
     sniffer = IPSniffer(multi_inspector)

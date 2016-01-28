@@ -2,10 +2,8 @@
 
 from scapy.all import *
 import thread
-import time
-import codecs
+
 import argparse
-from scapy.tools.UTscapy import sha1
 
 
 class SpoofedTCPIPConnection(object):
