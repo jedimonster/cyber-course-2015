@@ -2,11 +2,16 @@
 
 from scapy.all import *
 import thread
-
 import argparse
 
 
 class SpoofedTCPIPConnection(object):
+    """
+    Performs TCP handshake from an arbitrary IP and allows sending data through the resulting "socket".
+     Uses ARP poisoning to allow arbitary source IP.
+     Does not maintain the TCP "socket" - it will not ACK the other side or retransmit on failure.
+    """
+
     def __init__(self, src_ip, src_port, dst_ip, dst_port):
         self.dst_port = dst_port
         self.dst_ip = dst_ip
@@ -17,14 +22,24 @@ class SpoofedTCPIPConnection(object):
         self._ip = IP(src=self.src_ip, dst=self.dst_ip)
 
     def connect(self):
+        """
+        performs TCP handshake
+        """
         self._configure_iptables()
         self.arp_thread_id = thread.start_new_thread(self._poison_arp, ())
         self._handshake()
 
     def close(self):
+        """
+        Clears iptables, used for dropping the OS' RST packets.
+        """
         self._clear_OS_iptables()
 
     def send_data(self, data):
+        """
+        wraps the given data in a tcp packet and sends it.
+        :param data: data to send. assumed to fit in one packet.
+        """
         pckt = self._ip / TCP(sport=self.src_port, dport=self.dst_port,
                               seq=self._seq_num, ack=self._ack, flags='A') / data
         self._seq_num += len(data)
@@ -50,7 +65,6 @@ class SpoofedTCPIPConnection(object):
             ack_pckt = self._ip / TCP(sport=self.src_port, dport=self.dst_port, flags='A',
                                       seq=synack.ack, ack=synack.seq + 1)
             send(ack_pckt)
-
 
         else:
             raise RuntimeError("SYNACK invalid")
