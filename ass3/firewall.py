@@ -1,9 +1,14 @@
+import os
+from netfilterqueue import NetfilterQueue
+
 from scapy.layers import http
+from scapy.layers.http import HTTP, HTTPRequest
+from ass2.q3 import IPSniffer
+
 
 class ChainedHttpInspect(object):
     def __init__(self, inspectors_str):
         self.http_logger = HttpLogger()
-        print inspectors_str
         self._inspectors = self._create_inspectors(inspectors_str)
 
     def inspect(self, pkt):
@@ -17,14 +22,32 @@ class ChainedHttpInspect(object):
 
     def _create_inspectors(self, inspectors_str):
         # todo
-        pass
+        inspectors = []
+
+        return inspectors
 
 
 class HttpLogger(object):
     def log(self, pkt):
-        pass
+        if HTTP in pkt:
+            http_pkt = pkt[HTTP]
+            req = http_pkt[HTTPRequest]
+            req.show()
+            print pkt[HTTP]
 
 
 if __name__ == '__main__':
+    os.system('iptables -A FORWARD -j NFQUEUE --queue-num 1')
+    http_inspector = ChainedHttpInspect([])
 
-    pass
+    sniffer = IPSniffer(http_inspector)
+    nfqueue = NetfilterQueue()
+
+    try:
+        nfqueue.bind(1, lambda x: sniffer.process_packet(x))
+        nfqueue.run()
+    except KeyboardInterrupt:
+        pass
+    finally:
+        os.system('iptables -F')
+        os.system('iptables -X')
