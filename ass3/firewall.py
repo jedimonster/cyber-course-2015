@@ -29,7 +29,7 @@ class ChainedHttpInspect(object):
 
 class HttpLogger(object):
     def log(self, pkt):
-        if HTTP in pkt:
+        if HTTPRequest in pkt:
             http_pkt = pkt[HTTP]
             req = http_pkt[HTTPRequest]
             req.show()
