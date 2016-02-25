@@ -1,3 +1,5 @@
+from scapy.layers import http
+
 class ChainedHttpInspect(object):
     def __init__(self, inspectors_str):
         self.http_logger = HttpLogger()
@@ -24,4 +26,5 @@ class HttpLogger(object):
 
 
 if __name__ == '__main__':
+
     pass
