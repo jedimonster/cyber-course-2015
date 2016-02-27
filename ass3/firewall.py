@@ -3,6 +3,7 @@ from netfilterqueue import NetfilterQueue
 from scapy.layers import http
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from ass2.q3 import IPSniffer
+from ass3.inspectors.CSRF import CSRF
 from ass3.inspectors.ServerHeader import ServerHeaderInspector
 
 
@@ -24,7 +25,7 @@ class ChainedHttpInspect(object):
         # todo
         inspectors = []
 
-        return [ServerHeaderInspector(self.http_logger)]
+        return [ServerHeaderInspector(self.http_logger), CSRF(self.http_logger)]
         # return inspectors
 
 
