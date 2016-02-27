@@ -41,7 +41,6 @@ class HttpLogger(object):
             if len(self.requests) > self.MaxCacheSize:
                 self.requests.remove(0)
 
-
         elif HTTPResponse in pkt:
             self.responses += pkt
 
