@@ -1,8 +1,7 @@
 import os
 from netfilterqueue import NetfilterQueue
-
 from scapy.layers import http
-from scapy.layers.http import HTTP, HTTPRequest
+from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from ass2.q3 import IPSniffer
 
 
@@ -28,12 +27,24 @@ class ChainedHttpInspect(object):
 
 
 class HttpLogger(object):
+    def __init__(self):
+        self.requests = []
+        self.responses = []
+        self.MaxCacheSize = 10000
+
     def log(self, pkt):
         if HTTPRequest in pkt:
-            http_pkt = pkt[HTTP]
-            req = http_pkt[HTTPRequest]
-            req.show()
-            print pkt[HTTP]
+            self.requests += pkt
+
+            if len(self.requests) > self.MaxCacheSize:
+                self.requests.remove(0)
+
+
+        elif HTTPResponse in pkt:
+            self.responses += pkt
+
+            if len(self.responses) > self.MaxCacheSize:
+                self.responses.remove(0)
 
 
 if __name__ == '__main__':
