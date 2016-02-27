@@ -3,6 +3,7 @@ from netfilterqueue import NetfilterQueue
 from scapy.layers import http
 from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from ass2.q3 import IPSniffer
+from ass3.inspectors.ServerHeader import ServerHeaderInspector
 
 
 class ChainedHttpInspect(object):
@@ -23,15 +24,8 @@ class ChainedHttpInspect(object):
         # todo
         inspectors = []
 
-        return inspectors
-
-
-class HttpInspector(object):
-    def __init__(self, http_logger):
-        self.http_logger = http_logger
-
-    def inspect(self, pkt):
-        raise NotImplementedError()
+        return [ServerHeaderInspector(self.http_logger)]
+        # return inspectors
 
 
 class HttpLogger(object):
