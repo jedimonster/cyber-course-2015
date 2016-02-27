@@ -4,7 +4,7 @@ class HttpInspector(object):
 
     def inspect(self, pkt):
         """
-        inspects the given packet, if it's allowed, returns it (possibly modified) otherwise returns None
+        inspects the given packet, returns true iff it's allowed through
         :param pkt: scapy packet
         """
         raise NotImplementedError()
