@@ -3,5 +3,5 @@ from ass3.inspectors.Base import HttpInspector
 
 class ServerHeaderInspector(HttpInspector):
     def inspect(self, packet):
-        print packet
+        print packet.show()
         return True
