@@ -5,6 +5,7 @@ from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from ass2.q3 import IPSniffer
 from ass3.inspectors.CSRF import CSRF
 from ass3.inspectors.ServerHeader import ServerHeaderInspector
+from ass3.inspectors.XSS import XSS
 from ass3.parse_settings import parse_settings
 from ass3.warning_logger import StdoutLogger
 
@@ -32,7 +33,7 @@ class ChainedHttpInspect(object):
         # list of supported inspectors
         logger = StdoutLogger()
         res = []
-        supported_inspectors = [CSRF, ServerHeaderInspector]
+        supported_inspectors = [CSRF, ServerHeaderInspector, XSS]
         sp_strings = [x.__name__ for x in supported_inspectors]
         for item in inspectors_str:
             if item[0] in sp_strings:

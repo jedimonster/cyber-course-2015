@@ -1,6 +1,8 @@
 class BaseHttpInspector(object):
-    def __init__(self, http_logger):
-        self.http_logger = http_logger
+    def __init__(self, http_logger, logger, write=True, block=True):
+        self.write = write
+        self.block = block
+        self.logger = logger
 
     def inspect(self, pkt):
         """

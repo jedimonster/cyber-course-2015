@@ -7,11 +7,8 @@ from ass3.inspectors.Base import BaseHttpInspector
 
 class ServerHeaderInspector(BaseHttpInspector):
     def __init__(self, http_logger, logger,  write=True, block=True):
-        super(ServerHeaderInspector, self).__init__(http_logger)
+        super(ServerHeaderInspector, self).__init__(http_logger, logger)
         self.VersionNumberRegexp = re.compile('\d+\.\d+')
-        self.write = write
-        self.block = block
-        self.logger = logger
 
     def inspect(self, packet):
         if HTTPResponse in packet:
