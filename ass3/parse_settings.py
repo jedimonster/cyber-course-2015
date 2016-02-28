@@ -2,6 +2,7 @@
 Settings parsing functions
 """
 
+
 def parse_settings(path):
     """
     :param path: path to Settings file

@@ -6,6 +6,12 @@ from ass3.inspectors.Base import BaseHttpInspector
 
 
 class CSRF(BaseHttpInspector):
+
+    def __init__(self, http_logger, write=True, block=True):
+        super(CSRF, self).__init__(http_logger)
+        self.write = write
+        self.block = block
+
     def inspect(self, pkt):
         if HTTPRequest in pkt and pkt[HTTPRequest].fields['Method'] == 'POST':
             pkt = pkt[HTTPRequest]

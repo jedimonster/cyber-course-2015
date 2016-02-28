@@ -5,6 +5,7 @@ from scapy.layers.http import HTTP, HTTPRequest, HTTPResponse
 from ass2.q3 import IPSniffer
 from ass3.inspectors.CSRF import CSRF
 from ass3.inspectors.ServerHeader import ServerHeaderInspector
+from ass3.parse_settings import parse_settings
 
 
 class ChainedHttpInspect(object):
@@ -22,10 +23,20 @@ class ChainedHttpInspect(object):
         return True
 
     def _create_inspectors(self, inspectors_str):
-        # todo
-        inspectors = []
+        """
 
-        return [ServerHeaderInspector(self.http_logger), CSRF(self.http_logger)]
+        :param inspectors_str: list of tuples from parse_settings
+        :return:
+        """
+        # list of supported inspectors
+        res = []
+        supported_inspectors = [CSRF, ServerHeaderInspector]
+        sp_strings = [x.__name__ for x in supported_inspectors]
+        for item in inspectors_str:
+            if item[0] in sp_strings:
+                index = sp_strings.index(item[0])
+                res.append(supported_inspectors[index](self.http_logger, item[1], item[2]))
+        return res
         # return inspectors
 
 
@@ -51,7 +62,8 @@ class HttpLogger(object):
 
 if __name__ == '__main__':
     os.system('iptables -A FORWARD -j NFQUEUE --queue-num 1')
-    http_inspector = ChainedHttpInspect([])
+    config = parse_settings("Settings")
+    http_inspector = ChainedHttpInspect(config)
 
     sniffer = IPSniffer(http_inspector)
     nfqueue = NetfilterQueue()
