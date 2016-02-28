@@ -1,4 +1,4 @@
-class HttpInspector(object):
+class BaseHttpInspector(object):
     def __init__(self, http_logger):
         self.http_logger = http_logger
 

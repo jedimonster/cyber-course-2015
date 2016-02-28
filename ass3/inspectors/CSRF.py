@@ -2,10 +2,10 @@ import urlparse
 
 from scapy.layers.http import HTTPRequest
 
-from ass3.inspectors.Base import HttpInspector
+from ass3.inspectors.Base import BaseHttpInspector
 
 
-class CSRF(HttpInspector):
+class CSRF(BaseHttpInspector):
     def inspect(self, pkt):
         if HTTPRequest in pkt and pkt[HTTPRequest].fields['Method'] == 'POST':
             pkt = pkt[HTTPRequest]

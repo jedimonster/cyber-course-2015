@@ -2,10 +2,10 @@ import re
 
 from scapy.layers.http import HTTPResponse
 
-from ass3.inspectors.Base import HttpInspector
+from ass3.inspectors.Base import BaseHttpInspector
 
 
-class ServerHeaderInspector(HttpInspector):
+class ServerHeaderInspector(BaseHttpInspector):
     def __init__(self, http_logger):
         super(ServerHeaderInspector, self).__init__(http_logger)
         self.VersionNumberRegexp = re.compile('\d+\.\d+')
