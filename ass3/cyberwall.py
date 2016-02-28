@@ -6,6 +6,7 @@ from ass2.q3 import IPSniffer
 from ass3.inspectors.CSRF import CSRF
 from ass3.inspectors.ServerHeader import ServerHeaderInspector
 from ass3.parse_settings import parse_settings
+from ass3.warning_logger import StdoutLogger
 
 
 class ChainedHttpInspect(object):
@@ -29,13 +30,14 @@ class ChainedHttpInspect(object):
         :return:
         """
         # list of supported inspectors
+        logger = StdoutLogger()
         res = []
         supported_inspectors = [CSRF, ServerHeaderInspector]
         sp_strings = [x.__name__ for x in supported_inspectors]
         for item in inspectors_str:
             if item[0] in sp_strings:
                 index = sp_strings.index(item[0])
-                res.append(supported_inspectors[index](self.http_logger, item[1], item[2]))
+                res.append(supported_inspectors[index](self.http_logger, logger,  item[1], item[2]))
         return res
         # return inspectors
 
