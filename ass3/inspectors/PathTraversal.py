@@ -1,3 +1,8 @@
+"""
+Path traversal vulnerabilities can be found when the application allows user-controllable
+data to interact with the filesystem.
+This inspector will attempt to catch Path traversal attacks.
+"""
 import re
 import urlparse
 from oauthlib.common import urldecode

@@ -1,3 +1,9 @@
+"""
+Cross Site Scripting (XSS) is also referred to as script injection. It means that an
+attacker has the ability to inject malicious scripts into to the application and have a
+browser run it. There are two types of XSS; stored and reflective.
+This inspector will attempt to catch XSS attacks.
+"""
 import re
 import urlparse
 

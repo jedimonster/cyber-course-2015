@@ -1,3 +1,6 @@
+"""
+Will rise warning when server advertise its version.
+"""
 import re
 
 from scapy.layers.http import HTTPResponse

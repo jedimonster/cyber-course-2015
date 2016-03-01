@@ -1,3 +1,10 @@
+"""
+Cross-Site Request Forgery (CSRF) is similar to XSS. The difference is that it does not
+require to inject malicious scripts into the web application. Instead an attacker can create
+a malicious web site, which holds a malicious script that will do actions behalf the
+targeted user.
+This inspector will attempt to catch CSRF attacks.
+"""
 import urlparse
 from scapy.layers.http import HTTPRequest
 from ass3.inspectors.Base import BaseHttpInspector

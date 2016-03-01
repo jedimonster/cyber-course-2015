@@ -1,3 +1,7 @@
+"""SQL injection vulnerabilities allows an attacker to control what query is run by the
+application.
+This inspector will attempt to catch SQL injection inputs
+"""
 import re
 import urlparse
 from scapy.layers.http import HTTPRequest

@@ -1,3 +1,6 @@
+"""
+Abstract class that represent inspector.
+"""
 class BaseHttpInspector(object):
     def __init__(self, http_logger, logger, write=True, block=True):
         self.write = write
