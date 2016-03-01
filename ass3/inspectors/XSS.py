@@ -21,7 +21,7 @@ class XSS(BaseHttpInspector):
             matches = map(lambda s: self.is_string_suspect(s), query_params.values())
 
             if any(matches):
-                self.logger.log_if_needed("Warning: suspected XSS Attack (params: %s)" % query_params)
+                self.logger.log_if_needed("Warning: suspected XSS Attack (params: %s)" % query_params, self.write)
 
                 # at this point we either block or ignore the rest of the suspects
                 return not self.block
