@@ -10,6 +10,7 @@ class XSS(BaseHttpInspector):
     def __init__(self, http_logger, logger, write=True, block=True):
         super(XSS, self).__init__(http_logger, logger, write, block)
         self.RE_SCRIPTS = re.compile("<script.*>", flags=re.IGNORECASE)
+        self.RE_FRAMES = re.compile("<i?frame.*>", flags=re.IGNORECASE)
 
     def inspect(self, pkt):
         if HTTPRequest in pkt:
@@ -39,4 +40,4 @@ class XSS(BaseHttpInspector):
         return True
 
     def is_string_suspect(self, str):
-        return self.RE_SCRIPTS.search(str)
+        return self.RE_SCRIPTS.search(str) is not None or self.RE_FRAMES.search(str) is not None
