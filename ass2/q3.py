@@ -63,6 +63,7 @@ class IPSniffer(object):
         :param pkt:
         :return:
         """
+
         scapy_packet = IP(pkt.get_payload())
 
         if IP in scapy_packet:

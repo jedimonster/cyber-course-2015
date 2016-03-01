@@ -1,4 +1,3 @@
 ServerHeaderInspector WB
-CSRF B
-Fake W
-XSS W
+CSRF BW
+XSS BW
