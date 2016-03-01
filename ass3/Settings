@@ -1,3 +1,4 @@
 ServerHeaderInspector WB
 CSRF BW
 XSS BW
+SQLInjection BW

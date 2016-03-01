@@ -1,8 +1,8 @@
 import re
 import urlparse
+from oauthlib.common import urldecode
 
 from scapy.layers.http import HTTPRequest
-
 from ass3.inspectors.Base import BaseHttpInspector
 
 
@@ -14,11 +14,9 @@ class PathTraversal(BaseHttpInspector):
         if HTTPRequest in pkt:
             url = pkt[HTTPRequest].fields['Path']
 
-            if "../" in url:
+            if "../" in url or '../' in urldecode(url):
                 self.logger.log_if_needed("Warning: suspected Path Traversal Attack (path: %s)" % url, self.write)
 
-                # at this point we either block or ignore the rest of the suspects
                 return not self.block
 
         return True
-
